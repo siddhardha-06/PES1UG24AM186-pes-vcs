@@ -5,26 +5,37 @@
 **Platform:** Ubuntu 22.04
 
 ---
+## Screenshots
 
-## Getting Started
+Below are the screenshots referenced in the lab instructions. Each image is stored in the `screenshots/` directory.
+
+### Phase 1
+- **Screenshot 1A:** ![Screenshot 1A](screenshots/1A.png)
+- **Screenshot 1B:** ![Screenshot 1B](screenshots/1B.png)
+
+### Phase 2
+- **Screenshot 2A:** ![Screenshot 2A](screenshots/2A.png)
+- **Screenshot 2B:** ![Screenshot 2B](screenshots/2B.png)
+
+### Phase 3
+- **Screenshot 3A:** ![Screenshot 3A](screenshots/3A.png)
+- **Screenshot 3B:** ![Screenshot 3B](screenshots/3B.png)
+
+### Phase 4 / Integration
+- **Screenshot 4A:** ![Screenshot 4A](screenshots/4A.png)
+- **Screenshot 4B:** ![Screenshot 4B](screenshots/4B.png)
+- **Screenshot 4C1:** ![Screenshot 4C1](screenshots/4C1.png)
+-  ![Screenshot 4C2](screenshots/4C2.png)
+
+
+
+
 
 ### Prerequisites
 
 ```bash
 sudo apt update && sudo apt install -y gcc build-essential libssl-dev
 ```
-
-### Using This Repository
-
-This is a **template repository**. Do **not** fork it.
-
-1. Click **"Use this template"** → **"Create a new repository"** on GitHub
-2. Name your repository (e.g., `SRN-pes-vcs`) and set it to **public**. Replace `SRN` with your actual SRN, e.g., `PESXUG24CSYYY-pes-vcs`
-3. Clone this repository to your local machine and do all your lab work inside this directory.
-4.  **Important:** Remember to commit frequently as you progress. You are required to have a minimum of 5 detailed commits per phase. Refer to [Submission Requirements](#submission-requirements) for more details.
-5. Clone your new repository and start working
-
-The repository contains skeleton source files with `// TODO` markers where you need to write code. Functions marked `// PROVIDED` are complete — do not modify them.
 
 ### Building
 
@@ -515,50 +526,7 @@ You can also run the full integration test:
 make test-integration
 ```
 
-**📸 Screenshot 4A:** Output of `./pes log` showing three commits with hashes, authors, timestamps, and messages.
 
-**📸 Screenshot 4B:** `find .pes -type f | sort` showing object store growth after three commits.
-
-**📸 Screenshot 4C:** `cat .pes/refs/heads/main` and `cat .pes/HEAD` showing the reference chain.
-
----
-
-## Phase 5 & 6: Analysis-Only Questions
-
-The following questions cover filesystem concepts beyond the implementation scope of this lab. Answer them in writing — no code required.
-
-### Branching and Checkout
-
-**Q5.1:** A branch in Git is just a file in `.git/refs/heads/` containing a commit hash. Creating a branch is creating a file. Given this, how would you implement `pes checkout <branch>` — what files need to change in `.pes/`, and what must happen to the working directory? What makes this operation complex?
-
-**Q5.2:** When switching branches, the working directory must be updated to match the target branch's tree. If the user has uncommitted changes to a tracked file, and that file differs between branches, checkout must refuse. Describe how you would detect this "dirty working directory" conflict using only the index and the object store.
-
-**Q5.3:** "Detached HEAD" means HEAD contains a commit hash directly instead of a branch reference. What happens if you make commits in this state? How could a user recover those commits?
-
-### Garbage Collection and Space Reclamation
-
-**Q6.1:** Over time, the object store accumulates unreachable objects — blobs, trees, or commits that no branch points to (directly or transitively). Describe an algorithm to find and delete these objects. What data structure would you use to track "reachable" hashes efficiently? For a repository with 100,000 commits and 50 branches, estimate how many objects you'd need to visit.
-
-**Q6.2:** Why is it dangerous to run garbage collection concurrently with a commit operation? Describe a race condition where GC could delete an object that a concurrent commit is about to reference. How does Git's real GC avoid this?
-
----
-
-## Submission Checklist
-
-### Screenshots Required
-
-| Phase | ID  | What to Capture                                                 |
-| ----- | --- | --------------------------------------------------------------- |
-| 1     | 1A  | `./test_objects` output showing all tests passing               |
-| 1     | 1B  | `find .pes/objects -type f` showing sharded directory structure |
-| 2     | 2A  | `./test_tree` output showing all tests passing                  |
-| 2     | 2B  | `xxd` of a raw tree object (first 20 lines)                    |
-| 3     | 3A  | `pes init` → `pes add` → `pes status` sequence                 |
-| 3     | 3B  | `cat .pes/index` showing the text-format index                  |
-| 4     | 4A  | `pes log` output with three commits                            |
-| 4     | 4B  | `find .pes -type f \| sort` showing object growth              |
-| 4     | 4C  | `cat .pes/refs/heads/main` and `cat .pes/HEAD`                 |
-| Final | --  | Full integration test (`make test-integration`)                 |
 
 ### Code Files Required (5 files)
 
@@ -594,9 +562,3 @@ The following questions cover filesystem concepts beyond the implementation scop
 * **Best Practices:** We highly prefer more than 5 detailed commits per phase. Granular commits that clearly show the delta in code block changes allow us to verify your step-by-step understanding of the concepts and prevent penalties <3
 
 ---
-
-## Further Reading
-
-- **Git Internals** (Pro Git book): https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain
-- **Git from the inside out**: https://codewords.recurse.com/issues/two/git-from-the-inside-out
-- **The Git Parable**: https://tom.preston-werner.com/2009/05/19/the-git-parable.html

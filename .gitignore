@@ -1,0 +1,29 @@
+
+
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+pes
+test_objects
+test_tree
+
+# Editor and OS files
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Logs and temporary
+*.log
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.pyc
