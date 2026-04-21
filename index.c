@@ -10,6 +10,9 @@
 #include <unistd.h>
 #include <dirent.h>
 
+// Forward declaration for object_write (defined in object.c)
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 IndexEntry* index_find(Index *index, const char *path) {
@@ -105,12 +108,8 @@ static int compare_index_entries(const void *a, const void *b) {
 
 int index_load(Index *index) {
     index->count = 0;
-
     FILE *f = fopen(INDEX_FILE, "r");
-    if (!f) {
-        // File doesn't exist yet — empty index, not an error
-        return 0;
-    }
+    if (!f) return 0;
 
     char hex[HASH_HEX_SIZE + 1];
     uint32_t mode;
@@ -127,10 +126,7 @@ int index_load(Index *index) {
         e->size = size;
         strncpy(e->path, path, sizeof(e->path) - 1);
         e->path[sizeof(e->path) - 1] = '\0';
-        if (hex_to_hash(hex, &e->hash) < 0) {
-            fclose(f);
-            return -1;
-        }
+        if (hex_to_hash(hex, &e->hash) < 0) { fclose(f); return -1; }
     }
 
     fclose(f);
@@ -138,21 +134,22 @@ int index_load(Index *index) {
 }
 
 int index_save(const Index *index) {
-    // Sort entries by path before writing
-    Index sorted = *index;
-    qsort(sorted.entries, sorted.count, sizeof(IndexEntry), compare_index_entries);
+    // Use heap to avoid stack overflow (Index is ~6MB)
+    Index *sorted = malloc(sizeof(Index));
+    if (!sorted) return -1;
+    *sorted = *index;
+    qsort(sorted->entries, sorted->count, sizeof(IndexEntry), compare_index_entries);
 
-    // Write to temp file first
     char tmp_path[] = ".pes/index.tmp.XXXXXX";
     int fd = mkstemp(tmp_path);
-    if (fd < 0) return -1;
+    if (fd < 0) { free(sorted); return -1; }
 
     FILE *f = fdopen(fd, "w");
-    if (!f) { close(fd); unlink(tmp_path); return -1; }
+    if (!f) { close(fd); unlink(tmp_path); free(sorted); return -1; }
 
     char hex[HASH_HEX_SIZE + 1];
-    for (int i = 0; i < sorted.count; i++) {
-        const IndexEntry *e = &sorted.entries[i];
+    for (int i = 0; i < sorted->count; i++) {
+        const IndexEntry *e = &sorted->entries[i];
         hash_to_hex(&e->hash, hex);
         fprintf(f, "%o %s %llu %u %s\n",
                 e->mode, hex,
@@ -160,51 +157,41 @@ int index_save(const Index *index) {
                 e->size, e->path);
     }
 
-    // Flush userspace buffer then fsync to disk
     fflush(f);
     fsync(fileno(f));
     fclose(f);
+    free(sorted);
 
-    // Atomically replace old index
-    if (rename(tmp_path, INDEX_FILE) < 0) {
-        unlink(tmp_path);
-        return -1;
-    }
-
+    if (rename(tmp_path, INDEX_FILE) < 0) { unlink(tmp_path); return -1; }
     return 0;
 }
 
 int index_add(Index *index, const char *path) {
-    // Read the file contents
     FILE *f = fopen(path, "rb");
-    if (!f) {
-        fprintf(stderr, "error: cannot open '%s'\n", path);
-        return -1;
-    }
+    if (!f) { fprintf(stderr, "error: cannot open '%s'\n", path); return -1; }
 
     fseek(f, 0, SEEK_END);
     long file_size = ftell(f);
     fseek(f, 0, SEEK_SET);
     if (file_size < 0) { fclose(f); return -1; }
 
-    uint8_t *data = malloc(file_size);
+    uint8_t *data = malloc(file_size + 1);
     if (!data) { fclose(f); return -1; }
-    fread(data, 1, file_size, f);
+
+    if ((long)fread(data, 1, file_size, f) != file_size) {
+        free(data); fclose(f); return -1;
+    }
     fclose(f);
 
-    // Write blob to object store
     ObjectID blob_id;
     if (object_write(OBJ_BLOB, data, file_size, &blob_id) < 0) {
-        free(data);
-        return -1;
+        free(data); return -1;
     }
     free(data);
 
-    // Get file metadata
     struct stat st;
     if (lstat(path, &st) < 0) return -1;
 
-    // Update or add index entry
     IndexEntry *existing = index_find(index, path);
     if (!existing) {
         if (index->count >= MAX_INDEX_ENTRIES) return -1;
